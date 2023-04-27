@@ -1,27 +1,35 @@
 package com.ramkatom.myappviabla;
 
-import androidx.appcompat.app.AppCompatActivity;
-
+import android.Manifest;
+import android.content.pm.PackageManager;
+import android.location.Location;
 import android.os.Bundle;
-import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.Toast;
 
-import com.google.android.gms.maps.GoogleMap;
-import android.os.Bundle;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.fragment.app.FragmentActivity;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
+
+import com.google.android.gms.location.FusedLocationProviderClient;
+import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.MapView;
 import com.google.android.gms.maps.OnMapReadyCallback;
+import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.MarkerOptions;
+import com.google.android.gms.tasks.OnSuccessListener;
 
 public class Map extends AppCompatActivity implements OnMapReadyCallback {
 
+    private static final int MY_PERMISSIONS_REQUEST_LOCATION = 1;
     private MapView mapView;
     private GoogleMap googleMap;
+    private Location mLastLocation;
+    private FusedLocationProviderClient fusedLocationClient;
 
     Button btn_host;
     EditText editText;
@@ -37,6 +45,7 @@ public class Map extends AppCompatActivity implements OnMapReadyCallback {
 
         editText = findViewById(R.id.textbox1);
 
+        fusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
     }
 
     @Override
@@ -67,8 +76,37 @@ public class Map extends AppCompatActivity implements OnMapReadyCallback {
     public void onMapReady(GoogleMap map) {
         googleMap = map;
 
-        LatLng BUAP_TUSA = new LatLng(19.00153, -98.20175);
-        googleMap.addMarker(new MarkerOptions().position(BUAP_TUSA).title("Marker in BUAP"));
-        googleMap.moveCamera(CameraUpdateFactory.newLatLng(BUAP_TUSA));
+
+
+        // Verifica los permisos de ubicación y solicita permisos si es necesario
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+            googleMap.setMyLocationEnabled(true);
+
+            fusedLocationClient.getLastLocation().addOnSuccessListener(new OnSuccessListener<Location>() {
+                @Override
+                public void onSuccess(Location location) {
+                    if (location != null)
+                    {
+                        double latitude = location.getLatitude();
+                        double longitude = location.getLongitude();
+
+                        LatLng latLng = new LatLng(latitude, longitude);
+                        googleMap.addMarker(new MarkerOptions()
+                                .position(latLng)
+                                .title("Mi ubicación")
+                                .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_MAGENTA)));
+
+                        // Mueve la cámara al nivel de zoom adecuado y centra el mapa en la ubicación
+
+                        googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latLng, 15));
+                    }
+                }
+            });
+        } else {
+            // Permiso de ubicación no concedido, solicita permisos al usuario
+            ActivityCompat.requestPermissions(this,
+                    new String[]{Manifest.permission.ACCESS_FINE_LOCATION},
+                    MY_PERMISSIONS_REQUEST_LOCATION);
+        }
     }
 }
